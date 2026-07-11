@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PANDATestVectors",
+  "type": "OBJECT",
+  "properties": {
+    "positive": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "description": { "type": "STRING" },
+          "key": { "type": "STRING" },
+          "kid": { "type": "STRING" },
+          "nonce": { "type": "STRING" },
+          "plaintext": { "type": "STRING" },
+          "envelope": {
+            "type": "OBJECT",
+            "properties": {
+              "v": { "type": "INTEGER" },
+              "alg": { "type": "STRING" },
+              "kid": { "type": "STRING" },
+              "nonce": { "type": "STRING" },
+              "ciphertext": { "type": "STRING" }
+            },
+            "required": ["v", "alg", "kid", "nonce", "ciphertext"]
+          }
+        },
+        "required": ["description", "key", "kid", "nonce", "plaintext", "envelope"]
+      }
+    },
+    "negative": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "description": { "type": "STRING" },
+          "key": { "type": "STRING" },
+          "kid": { "type": "STRING" },
+          "envelope": {
+            "type": "OBJECT",
+            "properties": {
+              "v": { "type": "INTEGER" },
+              "alg": { "type": "STRING" },
+              "kid": { "type": "STRING" },
+              "nonce": { "type": "STRING" },
+              "ciphertext": { "type": "STRING" }
+            },
+            "required": ["v", "alg", "kid", "nonce", "ciphertext"]
+          },
+          "expected_error": { "type": "STRING" }
+        },
+        "required": ["description", "key", "kid", "envelope", "expected_error"]
+      }
+    }
+  },
+  "required": ["positive", "negative"]
+}
