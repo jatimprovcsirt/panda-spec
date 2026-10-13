@@ -520,8 +520,12 @@ foreach ($d['vectors'] as $i => $v) {
 
   fs.writeFileSync(
     path.join(tmp, 'runner.py'),
+    // From the module that defines it. This imported
+    // panda.cli.commands.validate_token_format, which was a second copy of
+    // the pattern living in the CLI — the copy that accepted 48 hex
+    // characters where the rest accepted 48 or 64.
     `import json, sys
-from panda.cli.commands import validate_token_format
+from panda.crypto.token import validate_token_format
 
 with open(sys.argv[1], encoding="utf-8") as f:
     d = json.load(f)

@@ -290,10 +290,32 @@
         "valid": false
       },
       {
+        "description": "a trailing newline, which must be rejected",
+        "note": "The one case where the four engines disagreed on an identical pattern. In Python and PCRE, $ also matches before a trailing newline, so these bytes were a valid token in panda-py and panda-php and invalid in panda-node and panda-go. A token read from a file or pasted out of a heredoc carries one routinely, so the same string would have passed a local check in two SDKs and failed the portal.",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+        "valid": false
+      },
+      {
+        "description": "a trailing carriage return",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r",
+        "valid": false
+      },
+      {
+        "description": "a trailing CRLF, as a Windows file would carry",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r\n",
+        "valid": false
+      },
+      {
+        "description": "a leading newline",
+        "token": "\npanda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
         "description": "an empty string",
         "token": "",
         "valid": false
       }
-    ]
+    ],
+    "patternNote": "Written with $ because that is how three of the four engines spell it. Python and PCRE give $ a second meaning — it also matches immediately before a newline at the end of the subject — so those two must use \\Z and the D modifier respectively. Without that, the trailing-newline vector below passes in Node and Go and fails in the other two."
   }
 }

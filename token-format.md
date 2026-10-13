@@ -24,6 +24,32 @@ called the wrong one.
 - The payload is **48 or 64 lowercase hexadecimal characters** (`0`–`9`,
   `a`–`f`), and the whole string is anchored at the end.
 
+### Two engines spell "end of string" differently
+
+The pattern above is written with `$` because that is what most engines call
+it. **An implementation must confirm that its `$` means end of string and not
+"end of string, or just before a newline at the end."**
+
+Two engines give it that second meaning:
+
+| Engine | What `$` does | What to write instead |
+|---|---|---|
+| PCRE (PHP) | also matches before a final `\n` | the `D` modifier: `/(...)$/D` |
+| Python `re` | also matches before a final `\n` | `\Z`: `r"(...)\Z"` |
+| JavaScript | end of string only | `$` is correct |
+| Go `regexp` | end of text only | `$` is correct |
+
+This is not pedantry. A token read from a file, or pasted out of a heredoc,
+carries a trailing newline routinely. With the quirk in place,
+`panda_live_<48 hex>\n` was **a valid token in `panda-py` and `panda-php` and
+invalid in `panda-node` and `panda-go`** — the same bytes, two answers. A user
+would have had a token that worked in one SDK and was rejected by another, with
+nothing in either message to say why.
+
+The four vectors covering a trailing LF, CR and CRLF, and a leading newline,
+exist for this. Reverting PHP's `D` or Python's `\Z` fails exactly two of the
+152 checks — the two that name the engines with the quirk, and no others.
+
 ### Why lowercase
 
 `[a-f0-9]`, not `[a-fA-F0-9]`.
@@ -76,6 +102,32 @@ This step is **fail-closed**. A timeout, a connection error, a 5xx, or a
 response that cannot be parsed all mean *no key is generated*. The one thing
 it must never do is treat an unreachable portal as approval.
 
+### `valid` must be the JSON boolean `true`
+
+Not "truthy". **Only the literal boolean `true` is consent; every other value
+is a refusal.**
+
+The check was written as `if (!result.valid)` in JavaScript, `if
+(!$result['valid'])` in PHP, and `if not result["valid"]` in Python. A
+non-empty string is truthy in all three, so a body of
+
+```json
+{"valid": "false"}
+```
+
+— a response *explicitly saying the token is not valid* — was read as approval
+and a key was generated. So was `{"valid": "no"}` and `{"valid": 1}`.
+
+`panda-go` refused all of them, because decoding a JSON string into a Go `bool`
+fails. That is what surfaced it: one implementation disagreed with the other
+three, and it was the one that was right.
+
+The failure is in the dangerous direction. An unreachable portal is at least
+loud; a portal answering "no" in a form the client misreads is silent, and it
+ends with a key being handed out on the strength of it. Implementations must
+compare against the boolean — `!== true`, `!== true`, `is not True` — and treat
+anything else, including the string `"true"` and the number `1`, as a refusal.
+
 Two escape hatches exist, and both are deliberate:
 
 | | Effect |
@@ -87,13 +139,16 @@ The demo token is a fixed, published string that ships in `.env.example`. It
 is not a secret and grants nothing; it exists so that a developer can run
 `init` with no portal account.
 
-> **Known deviation.** `panda-py` performs no portal validation. It checks the
-> format and proceeds, so any well-formed token — including one that has been
-> revoked, or already used by another application — initialises successfully.
-> `panda-node`, `panda-php` and `panda-go` all call the portal. This is
-> recorded rather than left to be rediscovered: it is the difference between a
-> gate and the appearance of one, and the SDK missing it is the one whose
-> source is shortest to read.
+> **Resolved.** `panda-py` performed no portal validation at all: it checked
+> the format and proceeded, so any well-formed token — including one that had
+> been revoked, or already used by another application — initialised
+> successfully. It now calls the portal, and fails closed. This was recorded
+> here as a known deviation and then fixed; the entry stays because the way it
+> was found is the argument for the hand-written table below.
+>
+> **Also resolved, and worse.** Three of the four read `{"valid": "false"}` as
+> approval — see the section above. That one was not visible in the table at
+> all; it came out of writing the tests for it.
 
 ## What this gate is not
 
@@ -112,11 +167,18 @@ index — is offline and has no portal dependency.
 |---|---|---|
 | `panda-go` | `^panda_(demo\|live)_([a-f0-9]{48}\|[a-f0-9]{64})$` | yes |
 | `panda-node` | `^panda_(demo\|live)_([a-f0-9]{48}\|[a-f0-9]{64})$` | yes |
-| `panda-php` | `^panda_(demo\|live)_([a-f0-9]{48}\|[a-f0-9]{64})$` | yes |
-| `panda-py` | `^panda_(demo\|live)_([a-f0-9]{48}\|[a-f0-9]{64})$` | **no** |
+| `panda-php` | `/(...)$/D` — PCRE's `$` needs the modifier | yes |
+| `panda-py` | `r"(...)\Z"` — Python's `$` needs the anchor | yes |
 
 The `tokenFormat` vectors in `vectors/vectors.json` are run against all four
 implementations by `verify_interop.js`. They cover the pattern only — the
 portal is a live service and is not something an offline test can assert
 against. The portal column above is therefore recorded by hand and will go
 stale silently; it is the reason it is written down here at all.
+
+Two of the four entries in that column started out wrong, and neither was
+found by reading this table. `panda-py`'s absence was found by writing it
+down; the strict-`true` bug was found by writing tests for the portal call
+that the table forced someone to make. A hand-written status table is worth
+having for exactly that reason: not because it stays true, but because
+filling it in is what makes you go and look.

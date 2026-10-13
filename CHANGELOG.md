@@ -102,3 +102,44 @@ That hand-written table is how `panda-py`'s missing portal validation came to
 light: it does not call the portal at all, so any well-formed token — revoked,
 already activated, or invented — initialises successfully there while the
 other three refuse. It is recorded as a known deviation and is not fixed.
+
+## What the status table turned up
+
+Two of the four entries in `token-format.md`'s portal column started out wrong,
+and neither was found by reading the table. Both were found by filling it in.
+
+**`panda-py` performed no portal validation.** It checked the format and
+proceeded, so a revoked token, one already activated, and one never issued all
+initialised successfully. Describing the column meant deciding what to write
+for each row, and there was nothing to write. It now calls the portal.
+
+**Three of the four read `{"valid": "false"}` as approval.** Found while
+writing the tests that the fixed column made necessary. `if (!result.valid)`,
+`if (!$result['valid'])` and `if not result["valid"]` all treat a non-empty
+string as true, so a response explicitly saying the token is not valid was read
+as consent and a key was generated. `panda-go` refused it — decoding a JSON
+string into a Go `bool` fails — so one implementation disagreed with the
+other three, and it was the one that was right.
+
+That second one is worse than the first and neither is visible in a vector.
+The rule is now stated: only the JSON boolean `true` is consent.
+
+**`panda-php`'s portal call had never executed.** It referenced
+`CURLOPT_CONNECT_TIMEOUT`, a constant that does not exist; the real name is
+`CURLOPT_CONNECTTIMEOUT`. On PHP 8 that is a fatal error, so the call threw
+before opening a connection. The same defect class as everything else here: a
+code path nothing had ever entered.
+
+## Two engines spell the end of a string differently
+
+The pattern is anchored with `$`, and in Python and PCRE `$` also matches
+immediately before a newline at the end of the subject. So
+`panda_live_<48 hex>\n` was a valid token in `panda-py` and `panda-php` and
+invalid in `panda-node` and `panda-go` — the same bytes, two answers.
+
+Python needs `\Z`; PCRE needs the `D` modifier. Four vectors now cover a
+trailing LF, CR and CRLF and a leading newline. Reverting either fix fails
+exactly two of the 152 checks, and no others.
+
+This is the case a single pattern string cannot express, which is why the
+vector file carries a `patternNote` alongside it.
