@@ -8,14 +8,20 @@ This repository contains the canonical specification and cross-language test vec
 |---|---|
 | `envelope-format.md` | Normative envelope v1 wire-format specification |
 | `blind-index-format.md` | Normative blind index specification — normalisation modes and encoding |
-| `vectors/vectors.json` | Shared positive + negative test vectors consumed by all four language repos |
-| `vectors/vectors.schema.json` | JSON Schema validating vector structure |
+| `vectors/vectors.json` | Envelope and blind index vectors, consumed by all four language repos |
+| `vectors/vectors.schema.json` | JSON Schema for vector structure — written but not yet enforced by anything |
 | `verify_interop.js` | Cross-language interoperability verification script |
 
-The vectors cover the envelope only. The blind index is specified in
-`blind-index-format.md` but is not yet enforced by a vector — so four
-implementations agreeing on it is currently a matter of care rather than of
-mechanism.
+The vectors cover the envelope and the blind index.
+
+The blind index ones matter more than they look. Four implementations were
+agreeing on that format when the vectors were added — but by coincidence, not
+because anything checked. Four separate divergences had already been found by
+hand: the encoding, the normalisation mode the service applied, PHP's
+ASCII-only `trim`, and PHP's ASCII-only `strtolower`. The harness catches all
+four. Restoring PHP's old `trim` fails exactly three vectors, and nothing else.
+
+The schema is not enforced by anything yet; see the note inside it.
 
 ## Versioning
 

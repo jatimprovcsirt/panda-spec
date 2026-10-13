@@ -1,26 +1,27 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "PANDATestVectors",
-  "type": "OBJECT",
+  "description": "Structure of the shared vector set. Note that no tool in this repository validates against this file yet — see README.md. It is here so an editor or an external CI can check a vector file, and it is written in lowercase type names because JSON Schema requires them: an earlier revision used OBJECT and STRING, which no validator accepts.",
+  "type": "object",
   "properties": {
     "positive": {
-      "type": "ARRAY",
+      "type": "array",
       "items": {
-        "type": "OBJECT",
+        "type": "object",
         "properties": {
-          "description": { "type": "STRING" },
-          "key": { "type": "STRING" },
-          "kid": { "type": "STRING" },
-          "nonce": { "type": "STRING" },
-          "plaintext": { "type": "STRING" },
+          "description": { "type": "string" },
+          "key": { "type": "string" },
+          "kid": { "type": "string" },
+          "nonce": { "type": "string" },
+          "plaintext": { "type": "string" },
           "envelope": {
-            "type": "OBJECT",
+            "type": "object",
             "properties": {
-              "v": { "type": "INTEGER" },
-              "alg": { "type": "STRING" },
-              "kid": { "type": "STRING" },
-              "nonce": { "type": "STRING" },
-              "ciphertext": { "type": "STRING" }
+              "v": { "type": "integer" },
+              "alg": { "type": "string" },
+              "kid": { "type": "string" },
+              "nonce": { "type": "string" },
+              "ciphertext": { "type": "string" }
             },
             "required": ["v", "alg", "kid", "nonce", "ciphertext"]
           }
@@ -29,29 +30,78 @@
       }
     },
     "negative": {
-      "type": "ARRAY",
+      "type": "array",
       "items": {
-        "type": "OBJECT",
+        "type": "object",
         "properties": {
-          "description": { "type": "STRING" },
-          "key": { "type": "STRING" },
-          "kid": { "type": "STRING" },
+          "description": { "type": "string" },
+          "key": { "type": "string" },
+          "kid": { "type": "string" },
           "envelope": {
-            "type": "OBJECT",
+            "type": "object",
             "properties": {
-              "v": { "type": "INTEGER" },
-              "alg": { "type": "STRING" },
-              "kid": { "type": "STRING" },
-              "nonce": { "type": "STRING" },
-              "ciphertext": { "type": "STRING" }
+              "v": { "type": "integer" },
+              "alg": { "type": "string" },
+              "kid": { "type": "string" },
+              "nonce": { "type": "string" },
+              "ciphertext": { "type": "string" }
             },
             "required": ["v", "alg", "kid", "nonce", "ciphertext"]
           },
-          "expected_error": { "type": "STRING" }
+          "expected_error": { "type": "string" }
         },
         "required": ["description", "key", "kid", "envelope", "expected_error"]
       }
+    },
+    "blindIndex": {
+      "type": "object",
+      "description": "Blind index vectors. The key here is a blind index key and is deliberately not the one the envelope vectors use.",
+      "properties": {
+        "description": { "type": "string" },
+        "key": {
+          "type": "string",
+          "description": "Base64 of the 32-byte index key."
+        },
+        "vectors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "value": {
+                "type": "string",
+                "description": "The value to index, before normalisation."
+              },
+              "normalization": {
+                "type": "string",
+                "enum": [
+                  "lowercase",
+                  "email",
+                  "nik",
+                  "digits",
+                  "phone",
+                  "trim",
+                  "none",
+                  "raw"
+                ]
+              },
+              "normalized": {
+                "type": "string",
+                "description": "What was actually hashed. Carried so a disagreement can be diagnosed as a normalisation difference rather than only as a wrong index — which is the disagreement four implementations have actually had."
+              },
+              "index": {
+                "type": "string",
+                "description": "Base64 of the 32-byte HMAC-SHA256, 44 characters ending in '='."
+              },
+              "note": { "type": "string" }
+            },
+            "required": ["description", "value", "normalization", "normalized", "index"]
+          }
+        }
+      },
+      "required": ["key", "vectors"]
     }
   },
-  "required": ["positive", "negative"]
+  "required": ["positive", "negative", "blindIndex"]
 }

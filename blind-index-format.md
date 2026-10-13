@@ -3,6 +3,11 @@
 This document describes how a blind index is computed, so that a value indexed
 by one implementation is found by another.
 
+The rules below are checked by the `blindIndex` vectors in
+`vectors/vectors.json`, run against all four implementations by
+`verify_interop.js`. A change to this document that no implementation follows
+fails that run — which is how it should be, and was not always the case.
+
 It exists because the encoding and the normalisation rules were, until now,
 pinned nowhere. Four implementations agreed by coincidence rather than by
 agreement, and the only document that mentioned the encoding at all said

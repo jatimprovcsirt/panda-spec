@@ -110,5 +110,72 @@
       },
       "expected_error": "MalformedEnvelope"
     }
-  ]
+  ],
+  "blindIndex": {
+    "description": "Blind index vectors. The key is a blind index key and is deliberately not the key the envelope vectors use: they are different secrets and mixing them would be a mistake worth making visible here.",
+    "key": "cGFuZGEtYmxpbmQtaW5kZXgta2V5LTMyLWJ5dGVzISE=",
+    "vectors": [
+      {
+        "description": "a NIK, under the default normalisation",
+        "value": "3201012501990001",
+        "normalization": "lowercase",
+        "normalized": "3201012501990001",
+        "index": "j8rfuZegca7EziluP8g4zxZNdZMgoHwjFGazDPYY+dk="
+      },
+      {
+        "description": "a NIK written with separators, under the NIK rule",
+        "value": "3201-0125-0199-0001",
+        "normalization": "nik",
+        "normalized": "3201012501990001",
+        "index": "j8rfuZegca7EziluP8g4zxZNdZMgoHwjFGazDPYY+dk=",
+        "note": "Indexes identically to the plain NIK above. That agreement is the whole reason the NIK rule exists."
+      },
+      {
+        "description": "a NIK with a trailing non-breaking space",
+        "value": "3201012501990001 ",
+        "normalization": "lowercase",
+        "normalized": "3201012501990001",
+        "index": "j8rfuZegca7EziluP8g4zxZNdZMgoHwjFGazDPYY+dk=",
+        "note": "U+00A0. Arrives whenever a value is pasted from a word processor or a spreadsheet. panda-php removed ASCII whitespace only and failed this vector until 0.2.1."
+      },
+      {
+        "description": "a value with non-ASCII letters",
+        "value": "ÅNGSTRÖM",
+        "normalization": "lowercase",
+        "normalized": "ångström",
+        "index": "hjqW44THuhmBYnwgaOfiI4VhDzpdy3Eq710ZyEOrOtc=",
+        "note": "panda-php lowercased ASCII only and failed this vector until 0.2.1."
+      },
+      {
+        "description": "a value padded with ideographic spaces",
+        "value": "　nilai　",
+        "normalization": "trim",
+        "normalized": "nilai",
+        "index": "pEWm9VbVy0o6GZIkKoMgL7wk5Kr+/847Q5SZC0YjJa0=",
+        "note": "U+3000. Removed by the Unicode White_Space property, which Go and panda-php implement and Node.js and Python approximate differently."
+      },
+      {
+        "description": "a value with surrounding spaces, not normalised at all",
+        "value": "  spaced  ",
+        "normalization": "none",
+        "normalized": "  spaced  ",
+        "index": "z+uOQZ4depshtWrRddn1e/IYOhVFyCgmBzmd4tWHs10="
+      },
+      {
+        "description": "an email, which is what the lowercase rule is for",
+        "value": "  Budi@Example.COM  ",
+        "normalization": "lowercase",
+        "normalized": "budi@example.com",
+        "index": "wt7bKMSZSUSufCuGI6BcCsebr7SXsSDYOO+qg6DBhkI="
+      },
+      {
+        "description": "a name under the NIK rule — this one indexes the same as every other name",
+        "value": "Budi Santoso",
+        "normalization": "nik",
+        "normalized": "",
+        "index": "mu7re6O0T3m4MxrylZrd+twfWTtwpr6MZWaF9mLYbGQ=",
+        "note": "The hazard, pinned deliberately. The NIK rule strips everything that is not a digit, so this normalises to the empty string — and so does every other value without digits. One index, shared by all of them. See blind-index-format.md."
+      }
+    ]
+  }
 }

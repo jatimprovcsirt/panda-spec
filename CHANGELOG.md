@@ -36,9 +36,29 @@ implementations had already agreed on it by coincidence.
 |---|---|
 | `envelope-format.md` | Normative. Envelope v1 wire format. |
 | `blind-index-format.md` | Normative. Normalisation modes and encoding. |
-| `vectors/vectors.json` | Envelope test vectors — positive and negative cases. |
+| `vectors/vectors.json` | Envelope vectors (positive, negative) and blind index vectors. |
 
-The blind index has **no vectors**, so its specification is enforced by nothing
-but care. Four implementations agree on it today; that agreement is not
-mechanically checked, and it was reached by accident rather than by following
-the document, which did not exist at the time.
+## The blind index is now enforced
+
+The blind index had no vectors, so its specification was enforced by nothing
+but care. Four implementations were agreeing on it — by coincidence rather
+than by following the document, which did not exist at the time.
+
+There are now eight vectors, covering each normalisation mode and, more
+usefully, the cases where implementations actually diverged: a trailing
+non-breaking space, non-ASCII letters, an ideographic space, and the NIK rule
+collapsing a value with no digits to the empty string.
+
+Each vector carries the `normalized` value alongside the expected index. When
+two implementations disagree, the useful question is not "which index is
+right" but "what did you hash", and an index alone never answers it.
+
+`verify_interop.js` runs all eight against all four implementations: 32 checks.
+Restoring PHP's old `trim` and `strtolower` fails exactly three of them, which
+is the point — those three were a real defect that shipped, and nothing
+noticed for a week.
+
+Each language reads the vectors from a file rather than receiving them as
+arguments. Several values contain characters that do not survive shell
+quoting, and a harness that mangled them would report a failure in the
+implementation rather than in itself.
