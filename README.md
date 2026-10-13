@@ -49,3 +49,13 @@ node verify_interop.js
 ```
 
 Requires: Node.js ≥ 18, PHP ≥ 8.1 with ext-openssl, Go ≥ 1.20, and Python ≥ 3.10. All four language repos must be siblings in the same parent directory.
+
+## Licence
+
+Apache License 2.0 — see `LICENSE` for the full text and `NOTICE` for
+attribution.
+
+Previously this repository had no licence file at all, which for a document
+four SDKs are required to conform to is worse than it sounds: the normative
+documents were being redistributed with no statement of what anyone was
+allowed to do with them.
