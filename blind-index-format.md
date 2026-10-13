@@ -39,12 +39,27 @@ to the same NIK without it.
 
 Lowercasing follows the host language's standard string lowercasing.
 
-> **Known deviation.** PHP's `trim()` removes ASCII whitespace only, so
-> `panda-php` leaves a trailing `U+00A0` in place where Go, Node.js and Python
-> remove it. Verified against the released SDKs: one value and one key give
-> `96Yf1v9Somcu3yTQFdRRtcX3bZvwmheCGHOOGw3ht5g=` from Go, Node.js and Python,
-> and `H063+5q3uA0kWIc1VPudfKkEde5ARYYvMfMUO6rVlu0=` from PHP. PHP is the
-> outlier, and it is the one that has to change.
+> **Known deviations.** Delegating to the host language's `trim()` produces
+> four different sets, because each language means something slightly different
+> by it. Measured, not inferred — every row below was run:
+>
+> | | `U+0085` NEL | `U+001C` FS | `U+FEFF` BOM |
+> |---|---|---|---|
+> | Go `strings.TrimSpace` | removes | — | — |
+> | Node.js `trim()` | — | — | **removes** |
+> | Python `strip()` | removes | **removes** | — |
+> | PHP `trim()` | — | — | — |
+>
+> Go and PHP now implement this specification exactly — PHP since it replaced
+> `trim()` with the set above, having previously removed ASCII whitespace only,
+> which meant a trailing non-breaking space from a pasted value produced a
+> different index here than in every other implementation.
+>
+> Node.js and Python still follow their built-ins. Node.js misses `U+0085` and
+> removes `U+FEFF`; Python removes `U+001C`–`U+001F`. Neither is corrected yet.
+> The characters are obscure and the practical risk is low, but a divergence in
+> a value the specification calls whitespace is still a lookup that returns
+> nothing, so it is recorded rather than left to be rediscovered.
 
 `lowercase` is the default when a caller does not choose. It is the default
 because it cannot empty a value — see the hazard below.
