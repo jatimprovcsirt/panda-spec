@@ -36,6 +36,15 @@ was adopted by all four SDK submodule pins.
 index rules only; an SDK pinning `v2` conforms to the token rule as well.**
 All four pins moved to `v2` on the day it was cut.
 
+> The `v2` row above was written *after* the tag, not before it, so the tree at
+> `v2` contains a version of this file that still describes `v2` as the next
+> tag. The order is the wrong way round — a tag should point at a commit whose
+> changelog already describes it — and the tag was not moved to correct it,
+> because the rule two sections up says a documentation tidy-up must not carry
+> a spec tag, and re-pointing a pushed tag is the operation that produced
+> `panda-php`'s stray `v0.5.0`. Everything `v2` needs to say about the spec is
+> in the tree at `v2`; only this table is one commit late.
+
 ## What is specified
 
 | Document | Status |
