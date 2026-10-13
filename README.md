@@ -8,11 +8,12 @@ This repository contains the canonical specification and cross-language test vec
 |---|---|
 | `envelope-format.md` | Normative envelope v1 wire-format specification |
 | `blind-index-format.md` | Normative blind index specification — normalisation modes and encoding |
-| `vectors/vectors.json` | Envelope and blind index vectors, consumed by all four language repos |
+| `token-format.md` | Normative access token format, and what the init-time portal gate must do |
+| `vectors/vectors.json` | Envelope, blind index, and token format vectors, consumed by all four language repos |
 | `vectors/vectors.schema.json` | JSON Schema for vector structure — written but not yet enforced by anything |
 | `verify_interop.js` | Cross-language interoperability verification script |
 
-The vectors cover the envelope and the blind index.
+The vectors cover the envelope, the blind index, and the token format.
 
 The blind index ones matter more than they look. Four implementations were
 agreeing on that format when the vectors were added — but by coincidence, not
@@ -21,11 +22,25 @@ hand: the encoding, the normalisation mode the service applied, PHP's
 ASCII-only `trim`, and PHP's ASCII-only `strtolower`. The harness catches all
 four. Restoring PHP's old `trim` fails exactly three vectors, and nothing else.
 
+The token format vectors exist for the same reason, one week later. The pattern
+was written out in four implementations, a CLI wizard, `CLAUDE.md`, and two
+documentation pages; three of the four implementations agreed, and `panda-py`
+accepted 48 hex characters where the rest accepted 48 or 64. Restoring that
+pattern now fails exactly two checks.
+
+They cover the *shape* of a token and nothing else. Whether a token is valid is
+a question for the live portal, and nothing offline can answer it — so
+`token-format.md` records which implementations call the portal, by hand, where
+it is visibly a claim rather than a test. That table is how `panda-py`'s
+missing portal call came to light.
+
 The schema is not enforced by anything yet; see the note inside it.
 
 ## Versioning
 
-This repo is tagged (`vN`) only when the spec or vector set changes, independent of any language SDK release cadence. Language repos (`panda-php`, `panda-node`, `panda-go`) pin to a specific tagged commit of this repo.
+This repo is tagged (`vN`) only when the spec or vector set changes, independent of any language SDK release cadence. All four language repos (`panda-php`, `panda-node`, `panda-go`, `panda-py`) vendor this repository as a submodule pinned to a specific tagged commit.
+
+`v1` is the current tag. It does not include `token-format.md` or the token vectors, which landed after it — an SDK pinning `v1` conforms to the envelope and blind index rules but predates the token rule. The next tag is `v2`.
 
 ## Running the Interop Check
 

@@ -101,7 +101,36 @@
         }
       },
       "required": ["key", "vectors"]
+    },
+    "tokenFormat": {
+      "type": "object",
+      "description": "Access token format vectors. No key: a token format is a question about a string, not a cryptographic operation.",
+      "properties": {
+        "description": { "type": "string" },
+        "pattern": {
+          "type": "string",
+          "description": "The accepted pattern, restated for a reader. Implementations are checked against this vector set, not by compiling this string."
+        },
+        "vectors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "token": { "type": "string" },
+              "valid": {
+                "type": "boolean",
+                "description": "Whether the token is well-formed. Note that no token here is validated against the portal: that is a live service and is not something an offline vector can assert."
+              },
+              "note": { "type": "string" }
+            },
+            "required": ["description", "token", "valid"]
+          }
+        }
+      },
+      "required": ["pattern", "vectors"]
     }
   },
-  "required": ["positive", "negative", "blindIndex"]
+  "required": ["positive", "negative", "blindIndex", "tokenFormat"]
 }

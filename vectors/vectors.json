@@ -177,5 +177,123 @@
         "note": "The hazard, pinned deliberately. The NIK rule strips everything that is not a digit, so this normalises to the empty string — and so does every other value without digits. One index, shared by all of them. See blind-index-format.md."
       }
     ]
+  },
+  "tokenFormat": {
+    "description": "Access token format vectors. These pin the one accepted spelling of a token: panda_(demo|live)_ followed by 48 or 64 lowercase hex characters. They exist because the pattern was written out in four implementations and several documents, and one of the copies accepted 48 characters where the rest accepted 48 or 64.",
+    "pattern": "^panda_(demo|live)_([a-f0-9]{48}|[a-f0-9]{64})$",
+    "vectors": [
+      {
+        "description": "a demo token with 48 hex characters",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": true
+      },
+      {
+        "description": "a live token with 48 hex characters",
+        "token": "panda_live_ffffffffffffffffffffffffffffffffffffffffffffffff",
+        "valid": true
+      },
+      {
+        "description": "a demo token with 64 hex characters",
+        "token": "panda_demo_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "valid": true
+      },
+      {
+        "description": "a live token with 64 hex characters",
+        "token": "panda_live_ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12",
+        "valid": true
+      },
+      {
+        "description": "digits only, which are hex",
+        "token": "panda_demo_123456789012345678901234567890123456789012345678",
+        "valid": true
+      },
+      {
+        "description": "all zeroes, which are hex",
+        "token": "panda_demo_000000000000000000000000000000000000000000000000",
+        "valid": true
+      },
+      {
+        "description": "uppercase hex, which must be rejected",
+        "note": "A token is compared byte-for-byte against what the portal issued. Accepting both spellings would let a token pass the local check and then fail at the portal.",
+        "token": "panda_demo_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "valid": false
+      },
+      {
+        "description": "mixed-case hex, which must be rejected",
+        "token": "panda_demo_aA1Bb2Cc3Dd4Ee5Ff6aA1Bb2Cc3Dd4Ee5Ff6aA1Bb2Cc3Dd4Ee5Ff6",
+        "valid": false
+      },
+      {
+        "description": "a single uppercase character among 47 lowercase ones",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaF",
+        "valid": false
+      },
+      {
+        "description": "47 hex characters, one short",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
+        "description": "49 hex characters, one over",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
+        "description": "63 hex characters, one short of the second allowed length",
+        "note": "48 and 64 are the only two lengths. 63 is not close to 64; it is a different, unsupported format.",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
+        "description": "65 hex characters, one over the second allowed length",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
+        "description": "an uppercase prefix",
+        "token": "PANDA_DEMO_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
+        "description": "an uppercase type",
+        "token": "panda_DEMO_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
+        "description": "a type that is not demo or live",
+        "token": "panda_test_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
+        "description": "a wrong prefix",
+        "token": "bear_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
+        "description": "a non-hex character in the payload",
+        "token": "panda_demo_gggggggggggggggggggggggggggggggggggggggggggggggg",
+        "valid": false
+      },
+      {
+        "description": "leading whitespace",
+        "token": " panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
+        "description": "trailing whitespace",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ",
+        "valid": false
+      },
+      {
+        "description": "an embedded newline",
+        "token": "panda_demo_aaaaaaaaaaaaaaaaaaaaaaaa\naaaaaaaaaaaaaaaaaaaaaaa",
+        "valid": false
+      },
+      {
+        "description": "an empty string",
+        "token": "",
+        "valid": false
+      }
+    ]
   }
 }

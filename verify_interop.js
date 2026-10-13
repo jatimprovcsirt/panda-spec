@@ -480,6 +480,180 @@ d.vectors.forEach((v, i) => {
 }
 
 // ──────────────────────────────────────────────
+// 9. Token format: every implementation, every vector
+// ──────────────────────────────────────────────
+//
+// The pattern was written out in four implementations, a CLI, CLAUDE.md and two
+// documentation pages. Three of the four implementations happened to agree;
+// the fourth accepted 48 hex characters where the rest accepted 48 or 64. No
+// copy could be called the wrong one, because the rule was not written down.
+//
+// It is written down now, in token-format.md, and this section is what keeps
+// it true. Nothing here touches the network: the portal is a live service and
+// a token's *validity* is not something a vector can assert. Only its shape.
+console.log('\n═══ Token format: all four implementations ═══');
+{
+  const tf = vectors.tokenFormat;
+  const root = path.join(__dirname, '..');
+
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'panda-token-'));
+  const dataFile = path.join(tmp, 'tokens.json');
+  fs.writeFileSync(dataFile, JSON.stringify({ vectors: tf.vectors }), 'utf8');
+
+  // Each runner prints "<position>\t<true|false>".
+  //
+  // Keyed by position rather than description, for the same reason the blind
+  // index section is: descriptions are free text and these ones contain
+  // commas and apostrophes, which do not survive every path between here and
+  // a subprocess. Position is ASCII. Nothing is left to mangle.
+  fs.writeFileSync(
+    path.join(tmp, 'runner.php'),
+    `<?php
+require ${JSON.stringify(path.join(root, 'panda-php', 'vendor', 'autoload.php'))};
+$d = json_decode(file_get_contents($argv[1]), true);
+foreach ($d['vectors'] as $i => $v) {
+    echo $i, "\\t", Panda\\Crypto\\TokenValidator::validateTokenFormat($v['token']) ? "true" : "false", "\\n";
+}
+`,
+    'utf8'
+  );
+
+  fs.writeFileSync(
+    path.join(tmp, 'runner.py'),
+    `import json, sys
+from panda.cli.commands import validate_token_format
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    d = json.load(f)
+
+for i, v in enumerate(d["vectors"]):
+    print(i, "true" if validate_token_format(v["token"]) else "false", sep="\\t")
+`,
+    'utf8'
+  );
+
+  // Go needs a module for the import to resolve, so its runner goes inside
+  // the repository and is removed afterwards. A separate directory from the
+  // blind index runner: one package main per directory.
+  const goDir = path.join(root, 'panda-go', '.tokencheck');
+  fs.mkdirSync(goDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(goDir, 'main.go'),
+    `package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"github.com/jatimprovcsirt/panda-go/crypto"
+)
+
+func main() {
+	raw, err := os.ReadFile(os.Args[1])
+	if err != nil {
+		panic(err)
+	}
+	var d struct {
+		Vectors []struct {
+			Token string \`json:"token"\`
+		} \`json:"vectors"\`
+	}
+	if err := json.Unmarshal(raw, &d); err != nil {
+		panic(err)
+	}
+	for i, v := range d.Vectors {
+		fmt.Printf("%d\\t%v\\n", i, crypto.ValidateTokenFormat(v.Token))
+	}
+}
+`,
+    'utf8'
+  );
+
+  fs.writeFileSync(
+    path.join(tmp, 'runner.js'),
+    `const fs = require('fs');
+const { validateTokenFormat } = require(${JSON.stringify(path.join(root, 'panda-node', 'dist', 'index.js'))});
+
+const d = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+d.vectors.forEach((v, i) => {
+  console.log(i + '\\t' + validateTokenFormat(v.token));
+});
+`,
+    'utf8'
+  );
+
+  const runners = [
+    {
+      name: 'panda-node',
+      command: `node ${JSON.stringify(path.join(tmp, 'runner.js'))} ${JSON.stringify(dataFile)}`,
+    },
+    {
+      name: 'panda-php',
+      command: `php ${JSON.stringify(path.join(tmp, 'runner.php'))} ${JSON.stringify(dataFile)}`,
+    },
+    {
+      name: 'panda-py',
+      command: `python ${JSON.stringify(path.join(tmp, 'runner.py'))} ${JSON.stringify(dataFile)}`,
+      env: { ...process.env, PYTHONPATH: path.join(root, 'panda-py', 'src') },
+    },
+    {
+      name: 'panda-go',
+      command: `go run ./.tokencheck ${JSON.stringify(dataFile)}`,
+      cwd: path.join(root, 'panda-go'),
+    },
+  ];
+
+  try {
+    for (const runner of runners) {
+      let output;
+      try {
+        output = execSync(runner.command, {
+          encoding: 'utf8',
+          timeout: 60000,
+          cwd: runner.cwd || __dirname,
+          env: runner.env || process.env,
+        });
+      } catch (e) {
+        log('FAIL', `${runner.name}: could not be run — ${String(e.message).split('\n')[0]}`);
+        failed++;
+        continue;
+      }
+
+      const produced = new Map();
+      for (const line of output.split(/\r?\n/)) {
+        const i = line.indexOf('\t');
+        if (i > 0) produced.set(line.slice(0, i).trim(), line.slice(i + 1).trim());
+      }
+
+      for (const [position, v] of tf.vectors.entries()) {
+        const got = produced.get(String(position));
+        const want = String(v.valid);
+        if (got === want) {
+          log('PASS', `${runner.name}: ${v.description}`);
+          passed++;
+        } else {
+          // The token is in the message. "Which string did you reject" is the
+          // question that answers a format disagreement, and "expected true,
+          // got false" on its own never does.
+          log(
+            'FAIL',
+            `${runner.name}: ${v.description}\n` +
+              `         expected ${want}\n` +
+              `         got      ${got === undefined ? '(no output)' : got}\n` +
+              `         ${JSON.stringify(v.token)}`
+          );
+          failed++;
+        }
+      }
+    }
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+    fs.rmSync(goDir, { recursive: true, force: true });
+  }
+}
+
+// ──────────────────────────────────────────────
 // Summary
 // ──────────────────────────────────────────────
 console.log(`\n${'═'.repeat(50)}`);
