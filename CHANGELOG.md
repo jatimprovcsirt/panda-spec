@@ -25,15 +25,16 @@ with, so:
 
 | Tag | Commit | What it marks |
 |---|---|---|
-| `v1` | `a376ee1` | The envelope format as it stands, plus the blind index encoding and the access token format. |
+| `v2` | `6157937` | The access token format, and the ninth interop section that enforces it across all four SDKs. |
+| `v1` | `a376ee1` | The envelope format and the blind index encoding, as they stand. |
 
-`v1` is the first tag. It was created after the blind index vectors landed and
+`v1` was the first tag, created after the blind index vectors landed, and it
 was adopted by all four SDK submodule pins.
 
-The changes below are on top of `v1` and are not tagged. They add a normative
-document and a vector section, so the next spec tag — `v2` — is what a
-conforming SDK would pin to; the token format is a new rule that no SDK
-implemented before it was written.
+`v2` adds `token-format.md` and 26 token vectors, taking the interop run from
+136 checks to 152. **An SDK pinning `v1` implements the envelope and blind
+index rules only; an SDK pinning `v2` conforms to the token rule as well.**
+All four pins moved to `v2` on the day it was cut.
 
 ## What is specified
 
