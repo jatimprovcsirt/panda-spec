@@ -181,3 +181,34 @@ exactly two of the 152 checks, and no others.
 
 This is the case a single pattern string cannot express, which is why the
 vector file carries a `patternNote` alongside it.
+
+## The whitespace divergence is closed
+
+Every implementation now trims the Unicode `White_Space` set, so the three
+characters that had to be left out of the vectors can be pinned.
+
+All four diverged from the set, each in its own way — `strings.TrimSpace`
+matched it only because it happens to include `U+0085`:
+
+| | `U+0085` NEL | `U+001C` FS | `U+FEFF` BOM |
+|---|---|---|---|
+| the set | whitespace | not | not |
+| Go `TrimSpace` | correct | correct | correct |
+| PHP `trim()` | correct | correct | correct |
+| Node `trim()` | **left it** | correct | **removed it** |
+| Python `strip()` | correct | **removed it** | correct |
+
+PHP was fixed first, then Node and Python. Node keeps `\p{White_Space}` in a
+regex; Python passes the set to `strip()` explicitly, because `re` cannot help
+— `\s` uses the same predicate as `str.isspace()` and carries the identical
+bug.
+
+Three vectors pin it, and each catches exactly the implementation it was
+written for: restoring Node's `trim()` fails the first and third, restoring
+Python's `strip()` fails the second. 164 interop checks, up from 152.
+
+The note above stayed in the document through all of this saying the
+divergence was "recorded rather than left to be rediscovered". It was accurate
+when written and it is what kept the problem findable — but a document that
+describes a defect for long enough starts to read like a specification of it,
+so it now says Resolved, with the measured table kept.
