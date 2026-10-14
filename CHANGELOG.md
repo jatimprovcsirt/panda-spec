@@ -74,6 +74,21 @@ All four pins moved to `v2` on the day it was cut.
 > `panda-php`'s stray `v0.5.0`. Everything `v2` needs to say about the spec is
 > in the tree at `v2`; only this table is one commit late.
 
+> **`v4` is a lightweight tag; `v1`–`v3` are annotated.** That is a
+> mistake, and it is recorded rather than corrected. The commit is the same
+> either way and all four SDK pins resolve it identically, so nothing is
+> broken — but `git describe` without `--tags` considers only annotated
+> tags, so it reports `v3-2-g2f462fb` for a tree that is at `v4`. That is
+> the string `git submodule status` prints, which is the command a maintainer
+> runs to check the pin, and it says the pin is two commits past the previous
+> spec version rather than at this one.
+>
+> It is not fixed by re-pointing the tag. The commit would not move, but
+> force-updating a pushed tag is the operation that produced panda-php's
+> stray `v0.5.0`, and a rule that is suspended when the reason seems good
+> enough is not a rule. The next spec tag is annotated, and the table above
+> says which commit each one is.
+
 ## What is specified
 
 | Document | Status |
