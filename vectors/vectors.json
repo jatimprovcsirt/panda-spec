@@ -175,6 +175,30 @@
         "normalized": "",
         "index": "mu7re6O0T3m4MxrylZrd+twfWTtwpr6MZWaF9mLYbGQ=",
         "note": "The hazard, pinned deliberately. The NIK rule strips everything that is not a digit, so this normalises to the empty string — and so does every other value without digits. One index, shared by all of them. See blind-index-format.md."
+      },
+      {
+        "description": "a value with a trailing NEL (U+0085), which is whitespace",
+        "value": "Budi",
+        "normalization": "trim",
+        "normalized": "Budi",
+        "index": "BeLQjt7jXEjqhy/cAOx6F7nuek9mfgt8BAFE4MW71Ps=",
+        "note": "NEL is Unicode White_Space, so it goes. String.prototype.trim() in Node left it — one of the two directions in which its set differs."
+      },
+      {
+        "description": "a value with a trailing information separator (U+001C), which is not whitespace",
+        "value": "Budi\u001c",
+        "normalization": "trim",
+        "normalized": "Budi\u001c",
+        "index": "ESLPQE5PkUUbWHiLUvqcil7YMMZF+CVf5hHSMAkI2n0=",
+        "note": "U+001C-U+001F are control characters, not whitespace. Python's strip() removed them, so this value indexed differently here than in PHP or Go."
+      },
+      {
+        "description": "a value with a trailing byte order mark (U+FEFF), which is not whitespace",
+        "value": "Budi﻿",
+        "normalization": "trim",
+        "normalized": "Budi﻿",
+        "index": "SNatRIttqX3RjViH/DSJI2WPDMXYuWcqTDH1/PA8eJc=",
+        "note": "U+FEFF is not White_Space. JavaScript's trim() stripped it, so a value carrying a BOM — which is what a value pasted out of Excel often has — indexed differently in Node than anywhere else."
       }
     ]
   },

@@ -55,16 +55,33 @@ Lowercasing follows the host language's standard string lowercasing.
 > | Python `strip()` | removes | **removes** | — |
 > | PHP `trim()` | — | — | — |
 >
-> Go and PHP now implement this specification exactly — PHP since it replaced
-> `trim()` with the set above, having previously removed ASCII whitespace only,
-> which meant a trailing non-breaking space from a pasted value produced a
-> different index here than in every other implementation.
+> All four implementations now trim this set exactly. The table above is kept
+> as the record of what each language's built-in does, because reaching for
+> `trim()` is still the obvious thing to do and the difference is invisible
+> until a value carries one of these characters.
 >
-> Node.js and Python still follow their built-ins. Node.js misses `U+0085` and
-> removes `U+FEFF`; Python removes `U+001C`–`U+001F`. Neither is corrected yet.
-> The characters are obscure and the practical risk is low, but a divergence in
-> a value the specification calls whitespace is still a lookup that returns
-> nothing, so it is recorded rather than left to be rediscovered.
+> **Resolved.** Every row was measured, and all four diverged from the set in
+> the third column — `Go TrimSpace` matched it only by accident of including
+> `U+0085`, and the other three each got a different pair wrong. PHP was fixed
+> first, then Node and Python:
+>
+> - PHP replaced `trim()` with an explicit PCRE class.
+> - Node keeps `\p{White_Space}` in a regular expression. JavaScript's `trim()`
+>   strips `U+FEFF`, which is not whitespace, and leaves `U+0085`, which is.
+> - Python passes the set explicitly to `strip()`. `str.strip()` uses
+>   `str.isspace()`, which also removes `U+001C`–`U+001F`; those are control
+>   characters, not whitespace. `re` is no help — `\s` uses the same predicate,
+>   so `re.sub(r"^\s+", ...)` carries the identical bug.
+>
+> Three vectors pin them: a trailing `U+0085`, `U+001C` and `U+FEFF`. Each one
+> catches exactly the implementation it was written for — restoring Node's
+> `trim()` fails the first and third, restoring Python's `strip()` fails the
+> second.
+>
+> The characters are obscure and the practical risk is low, which is why they
+> survived so long. But the failure mode is not a lookup that misses — it is a
+> value that indexes differently in one SDK than the others, so a row written
+> by one is not found by another, and nothing reports it.
 
 `lowercase` is the default when a caller does not choose. It is the default
 because it cannot empty a value — see the hazard below.
