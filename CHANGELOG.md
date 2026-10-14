@@ -53,6 +53,7 @@ copy of it.
 
 | Tag | Commit | What it marks |
 |---|---|---|
+| `v4` | see the tag | `cli-flags.md`, and the tenth interop section that runs all four CLIs' `--help`. |
 | `v2` | `6157937` | The access token format, and the ninth interop section that enforces it across all four SDKs. |
 | `v1` | `a376ee1` | The envelope format and the blind index encoding, as they stand. |
 
@@ -80,7 +81,48 @@ All four pins moved to `v2` on the day it was cut.
 | `envelope-format.md` | Normative. Envelope v1 wire format. |
 | `blind-index-format.md` | Normative. Normalisation modes and encoding. |
 | `token-format.md` | Normative. The access token format and the portal gate. |
+| `cli-flags.md` | Normative. The long flag names of `init` and `generate`, and where a non-local provider's settings come from. |
 | `vectors/vectors.json` | Envelope vectors (positive, negative), blind index vectors, and token format vectors. |
+
+## The command line is now specified
+
+`cli-flags.md` is the sixth instance of this project's recurring defect: **a
+shared rule with more than one definition.** Here the rule is the command
+line, and it had four.
+
+The documentation prints one command and means it to be run whichever SDK the
+reader picked. Five `init` flags were uniform — `--token`, `--kid`, `--quick`,
+`--reinit`, `--skip-key-gen` — and each of them became uniform the same way:
+added to all four in turn, each time after noticing that one SDK had it and
+another did not. That is five separate discoveries of one defect, each
+followed by a fix that addressed the instance rather than the cause.
+
+`--provider` was the sixth, and it was in `panda-node` alone. The consequence
+was not cosmetic: `init --quick` could not name a provider in the other three,
+so it always chose `local`, and **Vault and Infisical were unreachable from a
+CI pipeline in three of the four languages.** A team provisioning into Vault
+from a build could do it in Node.js and not in the language they were actually
+using.
+
+Section 10 of `verify_interop.js` runs `init --help` and `generate --help` in
+each SDK and asserts every pinned name appears in the output. It failed seven
+times when it was first run — once for `panda-node`'s `generate`, twice each
+for the other three — and passes now. The checks went from 164 to 200.
+
+Two things are deliberately *not* pinned, and both are recorded in the
+document rather than quietly omitted. **Short aliases** cannot be uniform:
+Symfony Console reserves `-q` for its global `--quiet`, so `panda-php` cannot
+offer `-q` for `--quick`, and it once tried — the collision threw from
+`mergeApplicationDefinition()`, so `panda init` exited before running a line
+of its own code while the command's own test file went on passing. A rule one
+of the four cannot satisfy is not a rule. **`--keystore`**, which `panda-node`
+had on both commands, is one concept under two names and is gone.
+
+Nothing in the section asserts behaviour, only that the flag is offered. A
+flag that is accepted and then discarded — which is what `panda-go`'s `--kid`
+did before it was fixed — passes this check and is not caught by it. That is
+stated in the document, because a check whose limits are not written down gets
+trusted for more than it does.
 
 ## The blind index is now enforced
 
