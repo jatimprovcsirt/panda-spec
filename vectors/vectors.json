@@ -341,5 +341,19 @@
       }
     ],
     "patternNote": "Written with $ because that is how three of the four engines spell it. Python and PCRE give $ a second meaning — it also matches immediately before a newline at the end of the subject — so those two must use \\Z and the D modifier respectively. Without that, the trailing-newline vector below passes in Node and Go and fails in the other two."
+  },
+  "cli": {
+    "description": "The long flag names of `panda init` and `panda generate`, as pinned in cli-flags.md. verify_interop.js section 10 runs `--help` in each SDK and asserts every name below appears. Short aliases are deliberately absent: Symfony Console reserves -q for its global --quiet, so the set cannot be uniform, and a rule one of the four cannot satisfy is not a rule.",
+    "commands": [
+      {
+        "command": "init",
+        "flags": ["--token", "--kid", "--quick", "--reinit", "--skip-key-gen", "--provider"]
+      },
+      {
+        "command": "generate",
+        "flags": ["--description", "--provider"],
+        "argument": "kid"
+      }
+    ]
   }
 }

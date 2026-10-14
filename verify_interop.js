@@ -658,6 +658,136 @@ d.vectors.forEach((v, i) => {
 }
 
 // ──────────────────────────────────────────────
+// 10. CLI flags: every implementation offers the pinned set
+// ──────────────────────────────────────────────
+//
+// The documentation prints one command, and it is meant to be run whichever
+// SDK the reader picked. Five init flags were uniform before this section
+// existed — each one added to all four in turn, each time after noticing that
+// one SDK had it and another did not. The sixth, `--provider`, was in
+// panda-node alone, so in the other three `init --quick` could not name a
+// provider at all and always chose `local`: Vault and Infisical were
+// unreachable from a pipeline in three of the four languages.
+//
+// The pinned names live in cli-flags.md and in vectors.json, so this section
+// and the document read one list rather than keeping two copies of it.
+//
+// Nothing here asserts behaviour, only that the flag is offered. A flag that
+// is accepted and then discarded — which is what panda-go's `--kid` did before
+// it was fixed — passes this and is not caught by it.
+console.log('\n═══ CLI flags: all four implementations ═══');
+{
+  const root = path.join(__dirname, '..');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'panda-cli-'));
+
+  // A shim file rather than `python -c`: the one-liner needs quotes inside
+  // quotes, and execSync on Windows hands the string to cmd.exe, which has its
+  // own idea of where a quoted argument ends.
+  const pyShim = path.join(tmp, 'help.py');
+  fs.writeFileSync(
+    pyShim,
+    `import sys
+from panda.cli.commands import main
+sys.argv = ["panda", sys.argv[1], "--help"]
+main()
+`,
+    'utf8'
+  );
+
+  const sdks = [
+    {
+      name: 'panda-node',
+      command: (c) =>
+        `node ${JSON.stringify(path.join(root, 'panda-node', 'dist', 'cli', 'index.js'))} ${c} --help`,
+    },
+    {
+      name: 'panda-php',
+      command: (c) =>
+        `php ${JSON.stringify(path.join(root, 'panda-php', 'bin', 'panda'))} ${c} --help`,
+    },
+    {
+      name: 'panda-go',
+      command: (c) => `go run ./cmd/panda ${c} --help`,
+      cwd: path.join(root, 'panda-go'),
+    },
+    {
+      name: 'panda-py',
+      command: (c) => `python ${JSON.stringify(pyShim)} ${c}`,
+      env: {
+        ...process.env,
+        PYTHONPATH: path.join(root, 'panda-py', 'src'),
+        PYTHONIOENCODING: 'utf-8',
+      },
+    },
+  ];
+
+  try {
+    for (const sdk of sdks) {
+      for (const spec of vectors.cli.commands) {
+        let help;
+        try {
+          help = execSync(sdk.command(spec.command), {
+            encoding: 'utf8',
+            timeout: 120000,
+            cwd: sdk.cwd || __dirname,
+            env: sdk.env || process.env,
+          });
+        } catch (e) {
+          log(
+            'FAIL',
+            `${sdk.name}: \`${spec.command} --help\` could not be run — ${String(e.message).split('\n')[0]}`
+          );
+          failed++;
+          continue;
+        }
+
+        // Symfony colourises its output, and the escapes sit between the
+        // dashes and the name, so a plain substring test would miss a flag
+        // that is right there on the screen.
+        const plain = help.replace(/\x1b\[[0-9;]*m/g, '');
+
+        for (const flag of spec.flags) {
+          if (plain.includes(flag)) {
+            log('PASS', `${sdk.name}: ${spec.command} ${flag}`);
+            passed++;
+          } else {
+            log(
+              'FAIL',
+              `${sdk.name}: \`${spec.command}\` does not offer ${flag}\n` +
+                `         see cli-flags.md — the four SDKs are documented as accepting the same command`
+            );
+            failed++;
+          }
+        }
+
+        if (spec.argument) {
+          // The Usage block is where a positional argument is named. Searching
+          // the whole help for the word would match the prose as well — every
+          // SDK's `generate` description says "specify kid" in a sentence.
+          const lines = plain.split(/\r?\n/);
+          const start = lines.findIndex((l) => /^\s*Usage:/i.test(l));
+          const usage = start < 0 ? '' : lines.slice(start, start + 3).join(' ');
+
+          if (new RegExp(spec.argument, 'i').test(usage)) {
+            log('PASS', `${sdk.name}: ${spec.command} takes <${spec.argument}>`);
+            passed++;
+          } else {
+            log(
+              'FAIL',
+              `${sdk.name}: \`${spec.command}\` does not take <${spec.argument}> as an argument\n` +
+                `         usage line: ${usage.trim() || '(none found)'}`
+            );
+            failed++;
+          }
+        }
+      }
+    }
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+// ──────────────────────────────────────────────
 // Summary
 // ──────────────────────────────────────────────
 console.log(`\n${'═'.repeat(50)}`);
