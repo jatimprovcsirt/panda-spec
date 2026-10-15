@@ -1,7 +1,7 @@
 # The telemetry format
 
 Normative. This document pins what the SDKs report to the portal, how the
-counters are accumulated, and — the part an agency will actually ask about —
+counters are accumulated, and — the part an organization will actually ask about —
 what is never sent.
 
 ## Why this is specified at all
@@ -29,7 +29,7 @@ This is the guarantee the format exists to make checkable. The payload carries
 **no** plaintext, no ciphertext, no key material, no field name, no field value,
 no record identifier, and no personal data.
 
-An agency's question is "where does our data go", not "is there a socket". The
+An organization's question is "where does our data go", not "is there a socket". The
 answer this format supports: **encryption, decryption and masking happen inside
 the application process, and what leaves is a count.**
 
@@ -97,7 +97,7 @@ was not counted at all.
 
 `decryptRaw` is deliberately **not** merged into `decrypts`. It is the
 sensitive operation, audited separately precisely because it returns full
-plaintext, and its shape per agency is a governance signal: an installation
+plaintext, and its shape per organization is a governance signal: an installation
 whose raw-decrypt count is high is doing something different from its peers.
 Merging the two destroys that signal for no gain.
 
@@ -209,9 +209,9 @@ becomes quietly wrong.
 - **Sum deltas.** Never treat a report as an absolute value, and never store
   the SDK's number as a running total it then reads back.
 - **Store per installation; display aggregates.** Counting in aggregate alone
-  would make the vulnerability warning impossible — it cannot tell an agency
+  would make the vulnerability warning impossible — it cannot tell an organization
   its SDK is out of date without knowing which installation runs which version.
-  Sharing that is a separate question from storing it: **no per-agency figure
+  Sharing that is a separate question from storing it: **no per-organization figure
   is displayed anywhere.**
 - **Accept a `key` event as the only source of the key count.**
 

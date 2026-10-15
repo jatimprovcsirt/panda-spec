@@ -31,7 +31,7 @@ nothing while listing a `LICENSE` in `files` that did not exist, so what npm
 actually published was unlicensed.
 
 Apache-2.0 over MIT for one reason: an express patent grant. MIT is silent on
-patents, and this is cryptographic software that other agencies and vendors are
+patents, and this is cryptographic software that other organizations and vendors are
 expected to embed in their own systems — the grant, and the retaliation clause
 that comes with it, is the part that matters when a third party deploys it.
 Apache-2.0 is no less permissive, so nothing about adoption gets harder.
@@ -100,6 +100,20 @@ All four pins moved to `v2` on the day it was cut.
 | `telemetry-format.md` | Normative. The two telemetry events, the delta rule, and what is never sent. |
 | `cli-flags.md` | Normative. The long flag names of `init` and `generate`, and where a non-local provider's settings come from. |
 | `vectors/vectors.json` | Envelope vectors (positive, negative), blind index vectors, and token format vectors. |
+
+## A wording fix, and no tag
+
+`telemetry-format.md` said "agency" five times, all of it written in this
+repository in the same sitting that produced the document. The word is out: in
+English it leans commercial — an advertising agency, a travel agency — and this
+project's own portal already says "organization" eight times over. It now says
+that here too.
+
+**No tag for this.** The rule at the top of this file is that a tag marks a
+change to the specification, and a wording fix changes no rule: the events, the
+counters, the delta rule and what must never be sent are all exactly as they
+were. Tagging it would tell four SDKs there is something new to conform to when
+there is not — which is the failure the rule exists to prevent.
 
 ## The telemetry format is now specified
 
