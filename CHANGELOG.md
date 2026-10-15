@@ -53,6 +53,7 @@ copy of it.
 
 | Tag | Commit | What it marks |
 |---|---|---|
+| `v5` | see the tag | `telemetry-format.md`, and the eleventh interop section that runs all four payload builders. |
 | `v4` | see the tag | `cli-flags.md`, and the tenth interop section that runs all four CLIs' `--help`. |
 | `v2` | `6157937` | The access token format, and the ninth interop section that enforces it across all four SDKs. |
 | `v1` | `a376ee1` | The envelope format and the blind index encoding, as they stand. |
@@ -96,8 +97,61 @@ All four pins moved to `v2` on the day it was cut.
 | `envelope-format.md` | Normative. Envelope v1 wire format. |
 | `blind-index-format.md` | Normative. Normalisation modes and encoding. |
 | `token-format.md` | Normative. The access token format and the portal gate. |
+| `telemetry-format.md` | Normative. The two telemetry events, the delta rule, and what is never sent. |
 | `cli-flags.md` | Normative. The long flag names of `init` and `generate`, and where a non-local provider's settings come from. |
 | `vectors/vectors.json` | Envelope vectors (positive, negative), blind index vectors, and token format vectors. |
+
+## The telemetry format is now specified
+
+`telemetry-format.md` is the seventh instance of the recurring defect, and the
+first one where the two definitions lived in **different repositories**.
+
+The SDKs sent `{token, keyFingerprint, sdkVersion, language}`. The portal read
+`{token, eventType, metadata}`. Neither side was written down anywhere, so
+neither could be called the wrong one — and the practical consequence was that
+`sdkVersion`, the single field FR-15 depends on ("the portal SHALL notify the
+registered PIC when a known-vulnerable SDK version is detected via telemetry"),
+was discarded by the receiver. That requirement could not have worked, and
+nothing would have said so.
+
+Nothing failed loudly because the endpoint was never reached at all: the SDKs
+posted to `https://portal.panda.gov.id/api/telemetry`, a hostname that does not
+resolve. The portal was at `csirt.jatimprov.go.id/panda/api/v1/telemetry` the
+whole time, and the token gate beside it already had the right base URL — two
+constants for one host, and they had come apart.
+
+Section 11 of `verify_interop.js` gives all four implementations the same
+counters and asserts they produce the same JSON: 224 checks, up from 200. It is
+testable offline because the payload is, and it does not touch the portal — the
+section asserts what would be sent, not that anything is sent.
+
+The fingerprint vectors include a key whose base64 encoding is itself, so an
+implementation that hashes the encoded text rather than the decoded bytes
+fails. That is the mistake that survives every round-trip test, because the
+implementation agrees with itself and only disagrees with the other three.
+
+## What the counters turned up in the audit trail
+
+Adding a count to `decrypt` meant reading it, and `decrypt` calls
+`decryptRaw`. That shaped the counters — a naive one would have counted every
+masked read twice and filed it as a *raw* read — but it also exposed something
+that had nothing to do with telemetry.
+
+**Every masked decryption wrote a false audit entry.** The shared
+implementation logged `decrypt_raw` on all nine of its outcomes, and `decrypt`
+logged `decrypt_masked` on top of it. So a masked read produced two entries,
+one of them asserting a raw decrypt that never happened — and a *failed* masked
+read produced only the false one, making it indistinguishable from a failed raw
+read.
+
+`decryptRaw` is described in `CLAUDE.md` as "explicitly logged as a distinct
+audit event". It was not distinct: the audit log was dominated by raw-decrypt
+entries for operations that never decrypted anything raw. All four SDKs had it,
+identically, because all four share this shape.
+
+The fix is in the four implementations, not here, but it is recorded here
+because it is the same defect one layer down: **a rule with two definitions** —
+what `decrypt` means to the audit trail, and what the code did about it.
 
 ## The command line is now specified
 
