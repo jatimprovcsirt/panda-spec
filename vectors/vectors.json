@@ -355,5 +355,52 @@
         "argument": "kid"
       }
     ]
+  },
+  "telemetry": {
+    "description": "What the SDKs report to the portal, pinned in telemetry-format.md. Section 11 of verify_interop.js gives every implementation these counters and asserts they produce the same JSON. `language` is the one field the vector cannot fix: each SDK reports its own, so the checker substitutes it. The counter set is deliberately three fields and not a lifetime total: a report carries the delta since that installation's last successful report, because an application runs as several worker processes that know nothing of each other, and the receiver can then simply add every report it gets.",
+    "endpoint": "https://csirt.jatimprov.go.id/panda/api/v1/telemetry",
+    "usagePayloadFields": ["counters", "eventType", "language", "sdkVersion", "token", "windowSeconds"],
+    "keyPayloadFields": ["eventType", "keyFingerprint", "language", "sdkVersion", "token"],
+    "usage": [
+      {
+        "description": "a window in which all three counters moved",
+        "token": "panda_live_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sdkVersion": "0.5.6",
+        "windowSeconds": 300,
+        "counters": { "encrypts": 4200, "decrypts": 3100, "decryptsRaw": 12 }
+      },
+      {
+        "description": "counters that did not move are present as zero, not omitted — otherwise the receiver cannot tell an idle installation from an older SDK that never sent the field",
+        "token": "panda_live_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sdkVersion": "0.5.6",
+        "windowSeconds": 300,
+        "counters": { "encrypts": 1, "decrypts": 0, "decryptsRaw": 0 }
+      },
+      {
+        "description": "a count past 2^32, which a 32-bit integer or a float would not carry",
+        "token": "panda_live_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sdkVersion": "0.5.6",
+        "windowSeconds": 3600,
+        "counters": { "encrypts": 4294967296, "decrypts": 0, "decryptsRaw": 0 }
+      }
+    ],
+    "fingerprint": [
+      {
+        "description": "the 32 byte values 0x00 to 0x1f",
+        "key": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+        "expected": "Yw3NKWbEM2aRElRIu7JbT/QSpJxzLbLIq8G4WBvXEN0="
+      },
+      {
+        "description": "thirty-two 0xff bytes",
+        "key": "//////////////////////////////////////////8=",
+        "expected": "r5YTdg9yY1+9tEpaCmPDnxKvMPlQpu5clxvhiOicQFE="
+      },
+      {
+        "description": "an arbitrary key, to catch an implementation that hashes the base64 text rather than the bytes",
+        "key": "Gp8Z1r4mQx7Tk2LvNc5bYdEwHs3Ju6PaRf9XoKtVmQ0=",
+        "expected": "J5VS5EEviC9TheeaKnC53UutYFYjYyLppfbhQH/zKk0="
+      }
+    ],
+    "fingerprintNote": "base64(SHA-256(key bytes)). Both halves are pinned deliberately. Hex instead of base64 is the drift this project has already had once, in the blind index encoding; hashing the base64 text instead of the decoded bytes is the mistake that survives every round-trip test, because the implementation is self-consistent and only disagrees with the other three."
   }
 }

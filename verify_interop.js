@@ -788,6 +788,264 @@ main()
 }
 
 // ──────────────────────────────────────────────
+// 11. Telemetry payload: every implementation, every vector
+// ──────────────────────────────────────────────
+//
+// The SDK and the portal are separate repositories and the contract between
+// them was written down in neither. Four senders agreed by coincidence and did
+// not agree: the SDKs sent `keyFingerprint`, `sdkVersion` and `language`, and
+// the portal read `eventType` and `metadata`. So `sdkVersion` — the field the
+// vulnerability warning depends on — was discarded by the receiver, and
+// nothing failed, because the endpoint was never reached at all.
+//
+// It is written down now, in telemetry-format.md, and this is what keeps it
+// true. Nothing here touches the network: the portal is a live service and a
+// vector must not assert against production. Only the payload that would be
+// sent.
+console.log('\n═══ Telemetry payload: all four implementations ═══');
+{
+  const t = vectors.telemetry;
+  const root = path.join(__dirname, '..');
+
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'panda-telemetry-'));
+  const usageFile = path.join(tmp, 'usage.json');
+  const fpFile = path.join(tmp, 'fingerprints.json');
+  fs.writeFileSync(usageFile, JSON.stringify(t.usage), 'utf8');
+  fs.writeFileSync(fpFile, JSON.stringify(t.fingerprint), 'utf8');
+
+  // Each runner prints "<kind>\t<position>\t<value>", keyed by position for
+  // the same reason the blind index and token sections are: descriptions are
+  // free text and do not survive every path between here and a subprocess.
+  fs.writeFileSync(
+    path.join(tmp, 'runner.php'),
+    `<?php
+require ${JSON.stringify(path.join(root, 'panda-php', 'vendor', 'autoload.php'))};
+$usage = json_decode(file_get_contents($argv[1]), true);
+foreach ($usage as $i => $v) {
+    echo "usage\\t", $i, "\\t", Panda\\Telemetry\\TelemetryPayload::usage($v), "\\n";
+}
+$fps = json_decode(file_get_contents($argv[2]), true);
+foreach ($fps as $i => $v) {
+    echo "fp\\t", $i, "\\t", Panda\\Telemetry\\TelemetryPayload::keyFingerprint(base64_decode($v['key'])), "\\n";
+}
+`,
+    'utf8'
+  );
+
+  fs.writeFileSync(
+    path.join(tmp, 'runner.py'),
+    `import base64, json, sys
+from panda.telemetry.payload import build_usage_payload, key_fingerprint
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    for i, v in enumerate(json.load(f)):
+        print("usage", i, build_usage_payload(v), sep="\\t")
+
+with open(sys.argv[2], encoding="utf-8") as f:
+    for i, v in enumerate(json.load(f)):
+        print("fp", i, key_fingerprint(base64.b64decode(v["key"])), sep="\\t")
+`,
+    'utf8'
+  );
+
+  // Go needs a module for the import to resolve, so its runner goes inside the
+  // repository and is removed afterwards — one package main per directory, as
+  // the blind index and token runners each have their own.
+  const goDir = path.join(root, 'panda-go', '.telemetrycheck');
+  fs.mkdirSync(goDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(goDir, 'main.go'),
+    `package main
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"github.com/jatimprovcsirt/panda-go/telemetry"
+)
+
+func main() {
+	raw, err := os.ReadFile(os.Args[1])
+	if err != nil {
+		panic(err)
+	}
+	var usage []telemetry.UsageInput
+	if err := json.Unmarshal(raw, &usage); err != nil {
+		panic(err)
+	}
+	for i, v := range usage {
+		out, err := telemetry.BuildUsagePayload(v)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("usage\\t%d\\t%s\\n", i, out)
+	}
+
+	raw, err = os.ReadFile(os.Args[2])
+	if err != nil {
+		panic(err)
+	}
+	var fps []struct {
+		Key string \`json:"key"\`
+	}
+	if err := json.Unmarshal(raw, &fps); err != nil {
+		panic(err)
+	}
+	for i, v := range fps {
+		key, err := base64.StdEncoding.DecodeString(v.Key)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("fp\\t%d\\t%s\\n", i, telemetry.KeyFingerprint(key))
+	}
+}
+`,
+    'utf8'
+  );
+
+  fs.writeFileSync(
+    path.join(tmp, 'runner.js'),
+    `const fs = require('fs');
+const { buildUsagePayload, keyFingerprint } = require(${JSON.stringify(path.join(root, 'panda-node', 'dist', 'telemetry', 'payload.js'))});
+
+const usage = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+usage.forEach((v, i) => console.log('usage\\t' + i + '\\t' + buildUsagePayload(v)));
+
+const fps = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+fps.forEach((v, i) => {
+  console.log('fp\\t' + i + '\\t' + keyFingerprint(Buffer.from(v.key, 'base64')));
+});
+`,
+    'utf8'
+  );
+
+  const runners = [
+    {
+      name: 'panda-node',
+      language: 'node',
+      command: `node ${JSON.stringify(path.join(tmp, 'runner.js'))} ${JSON.stringify(usageFile)} ${JSON.stringify(fpFile)}`,
+    },
+    {
+      name: 'panda-php',
+      language: 'php',
+      command: `php ${JSON.stringify(path.join(tmp, 'runner.php'))} ${JSON.stringify(usageFile)} ${JSON.stringify(fpFile)}`,
+    },
+    {
+      name: 'panda-py',
+      language: 'python',
+      command: `python ${JSON.stringify(path.join(tmp, 'runner.py'))} ${JSON.stringify(usageFile)} ${JSON.stringify(fpFile)}`,
+      env: { ...process.env, PYTHONPATH: path.join(root, 'panda-py', 'src'), PYTHONIOENCODING: 'utf-8' },
+    },
+    {
+      name: 'panda-go',
+      language: 'go',
+      command: `go run ./.telemetrycheck ${JSON.stringify(usageFile)} ${JSON.stringify(fpFile)}`,
+      cwd: path.join(root, 'panda-go'),
+    },
+  ];
+
+  try {
+    for (const runner of runners) {
+      let output;
+      try {
+        output = execSync(runner.command, {
+          encoding: 'utf8',
+          timeout: 120000,
+          cwd: runner.cwd || __dirname,
+          env: runner.env || process.env,
+        });
+      } catch (e) {
+        log('FAIL', `${runner.name}: could not be run — ${String(e.message).split('\n')[0]}`);
+        failed++;
+        continue;
+      }
+
+      const produced = new Map();
+      for (const line of output.split(/\r?\n/)) {
+        const parts = line.split('\t');
+        if (parts.length >= 3) produced.set(`${parts[0]}:${parts[1]}`, parts.slice(2).join('\t'));
+      }
+
+      // ── the usage payload ──
+      for (const [position, v] of t.usage.entries()) {
+        const raw = produced.get(`usage:${position}`);
+        if (raw === undefined) {
+          log('FAIL', `${runner.name}: no usage payload produced for "${v.description}"`);
+          failed++;
+          continue;
+        }
+
+        // Parsed rather than compared as text: byte equality would test each
+        // language's JSON encoder — key order, spacing, escaping — and those
+        // are allowed to differ. What is not allowed to differ is which fields
+        // exist and what they hold.
+        let got;
+        try {
+          got = JSON.parse(raw);
+        } catch (e) {
+          log('FAIL', `${runner.name}: usage payload is not JSON — ${raw}`);
+          failed++;
+          continue;
+        }
+
+        const expected = {
+          eventType: 'usage',
+          token: v.token,
+          sdkVersion: v.sdkVersion,
+          language: runner.language,
+          windowSeconds: v.windowSeconds,
+          counters: v.counters,
+        };
+
+        const missing = t.usagePayloadFields.filter((f) => !(f in got));
+        const extra = Object.keys(got).filter((f) => !t.usagePayloadFields.includes(f));
+        const wrong = t.usagePayloadFields.filter(
+          (f) => f in got && JSON.stringify(got[f]) !== JSON.stringify(expected[f])
+        );
+
+        if (missing.length === 0 && extra.length === 0 && wrong.length === 0) {
+          log('PASS', `${runner.name}: ${v.description}`);
+          passed++;
+        } else {
+          log(
+            'FAIL',
+            `${runner.name}: ${v.description}\n` +
+              (missing.length ? `         missing fields: ${missing.join(', ')}\n` : '') +
+              (extra.length ? `         unexpected fields: ${extra.join(', ')}\n` : '') +
+              wrong.map((f) => `         ${f}: got ${JSON.stringify(got[f])}, want ${JSON.stringify(expected[f])}\n`).join('') +
+              `         see telemetry-format.md — the portal reads these names`
+          );
+          failed++;
+        }
+      }
+
+      // ── the key fingerprint ──
+      for (const [position, v] of t.fingerprint.entries()) {
+        const got = produced.get(`fp:${position}`);
+        if (got === v.expected) {
+          log('PASS', `${runner.name}: fingerprint of ${v.description}`);
+          passed++;
+        } else {
+          log(
+            'FAIL',
+            `${runner.name}: fingerprint of ${v.description}\n` +
+              `         expected ${v.expected}\n` +
+              `         got      ${got === undefined ? '(no output)' : got}\n` +
+              `         base64(SHA-256(key bytes)) — see telemetry-format.md`
+          );
+          failed++;
+        }
+      }
+    }
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+    fs.rmSync(goDir, { recursive: true, force: true });
+  }
+}
+
+// ──────────────────────────────────────────────
 // Summary
 // ──────────────────────────────────────────────
 console.log(`\n${'═'.repeat(50)}`);
