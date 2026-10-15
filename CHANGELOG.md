@@ -101,6 +101,23 @@ All four pins moved to `v2` on the day it was cut.
 | `cli-flags.md` | Normative. The long flag names of `init` and `generate`, and where a non-local provider's settings come from. |
 | `vectors/vectors.json` | Envelope vectors (positive, negative), blind index vectors, and token format vectors. |
 
+## The envelope example, and the same reasoning
+
+The `kid` in `envelope-format.md`'s example was `opd-dukcapil-key-1` — two
+Indonesian administrative abbreviations, in the one example every SDK
+reproduces and every reader copies. It is `nik-key-1` now.
+
+**No tag for this either**, and this one is worth stating because the rule at
+the top of this file names `envelope-format.md` by hand. The letter of the
+rule says a change to this file earns a tag. The intent of the rule is that a
+tag tells four SDKs there is something new to *conform to* — and an example
+value changes nothing to conform to. The `kid` pattern is unchanged, the
+format is unchanged, and every vector still passes untouched.
+
+Where the letter and the intent disagree, this file has recorded the intent
+being followed before, and says so rather than quietly choosing. The wording
+fix above is the same case one file over, and both ride the next tag.
+
 ## A wording fix, and no tag
 
 `telemetry-format.md` said "agency" five times, all of it written in this

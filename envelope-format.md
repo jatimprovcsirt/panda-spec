@@ -10,7 +10,7 @@ All encrypted fields are stored as a JSON object (serialized to string) with the
 {
   "v": 1,
   "alg": "aes-256-gcm",
-  "kid": "opd-dukcapil-key-1",
+  "kid": "nik-key-1",
   "nonce": "<base64 encoded 12 bytes>",
   "ciphertext": "<base64 encoded (ciphertext + 16-byte authentication tag concatenated)>"
 }
