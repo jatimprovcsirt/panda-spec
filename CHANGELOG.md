@@ -58,6 +58,18 @@ copy of it.
 | `v2` | `6157937` | The access token format, and the ninth interop section that enforces it across all four SDKs. |
 | `v1` | `a376ee1` | The envelope format and the blind index encoding, as they stand. |
 
+## Not yet tagged
+
+`cli-flags.md` now pins what "already initialized" means for `init`: a
+non-empty `.panda/credentials`, not the presence of a `.panda` directory. A
+directory can exist without initialization — a Docker bind mount creates it,
+and the telemetry counter store writes into it — and an implementation using
+the directory as the marker refused to create the credentials it had been
+asked for.
+
+This is a behaviour rule, not a change to a format or to the vectors, so it
+does not carry a tag of its own. It will be in the tree at the next spec tag.
+
 `v1` was the first tag, created after the blind index vectors landed, and it
 was adopted by all four SDK submodule pins.
 

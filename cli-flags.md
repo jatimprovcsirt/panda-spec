@@ -109,6 +109,27 @@ is two definitions of it, so this document pins `--provider` and nothing else.
 **Help text, ordering, and the wizard's questions.** A vector asserting a
 description string would fail on a typo fix and pass on a behaviour change.
 
+## What `init` means by "already initialized"
+
+`init` refuses when the project is already initialized, unless `--reinit` is
+given. A project is initialized when **`.panda/credentials` exists and is
+non-empty** — not when the `.panda` directory exists.
+
+The directory is not a marker. A Docker bind mount creates it, and so does any
+process that writes into it, including the telemetry counter store's
+`telemetry-counters.json`. An implementation that checked `is_dir('.panda')`
+therefore refused to create the credentials it had been asked for, printed
+"already initialized", and exited 0. On a real deployment that left encryption
+working (provider `local` reads `PANDA_KEY_*` from the environment) while
+telemetry counted operations with no access token to report them under —
+silently, because telemetry is fail-silent by design. `panda-php` 0.2.6 and
+`panda-go` v0.5.4 shipped that check; `panda-node` and `panda-py` tested for
+credentials and were correct.
+
+`init` and `status` must use the same predicate. An empty `credentials` file —
+which `create()` writes before there is anything to store — is not an
+initialization.
+
 ## How this is checked
 
 `verify_interop.js` section 10 runs `init --help` and `generate --help` in each
@@ -122,6 +143,12 @@ was fixed — passes this check and is not caught by it. The CLI's own test suit
 is where that belongs, and `panda-py`'s `ci.yml` runs the binary and asserts
 its flags exist for the same reason: every unit test passed there while the
 command could not start.
+
+The "already initialized" predicate above is also behaviour, so it is not run
+here: an interop check would have to invoke `init` in each SDK and write a
+project. `panda-php` and `panda-go` cover it with a regression test that
+creates a `.panda` directory holding only `telemetry-counters.json` and asserts
+that `init` proceeds.
 
 ## What this pin was written against
 
